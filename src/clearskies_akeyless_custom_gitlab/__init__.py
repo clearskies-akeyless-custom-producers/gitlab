@@ -1,0 +1,97 @@
+from typing import Any
+
+import clearskies
+import clearskies_akeyless_custom_producer
+from clearskies import columns, validators
+
+from clearskies_akeyless_custom_gitlab.create import create
+from clearskies_akeyless_custom_gitlab.revoke import revoke
+from clearskies_akeyless_custom_gitlab.rotate import rotate
+
+
+class PayloadSchema(clearskies.Schema):
+    """
+    Schema defining the input parameters for your Gitlab producer.
+
+    Customize this schema to match the parameters your create(), rotate(), and revoke()
+    functions expect. The schema validates the JSON payload sent to Akeyless.
+
+    Examples:
+        Simple API token:
+        ```python
+        api_token = columns.String(validators=[validators.Required()])
+        ```
+
+        OAuth2 credentials:
+        ```python
+        client_id = columns.String(validators=[validators.Required()])
+        client_secret = columns.String(validators=[validators.Required()])
+        scopes = columns.String(default="read,write")  # comma-separated
+        ```
+
+        Project-based access:
+        ```python
+        personal_access_token = columns.String(validators=[validators.Required()])
+        project_id = columns.Integer(validators=[validators.Required()])
+        access_level = columns.Integer(default=30)  # 30 = Developer
+        scopes = columns.String(default="read_api,read_user")
+        ```
+
+        Database credentials:
+        ```python
+        admin_username = columns.String(validators=[validators.Required()])
+        admin_password = columns.String(validators=[validators.Required()])
+        database_name = columns.String(validators=[validators.Required()])
+        user_role = columns.String(default="readonly")
+        ```
+    """
+
+    # TODO: Define your service-specific input parameters here
+    # Replace these example fields with your actual requirements:
+
+    # Example fields (customize based on your service):
+    # api_token = columns.String(
+    #     validators=[validators.Required()],
+    #     help="The API token for authentication"
+    # )
+    # project_id = columns.Integer(
+    #     validators=[validators.Required()],
+    #     help="The project ID to create credentials for"
+    # )
+    # access_level = columns.Integer(
+    #     default=30,
+    #     help="Access level (10=Guest, 20=Reporter, 30=Developer, 40=Maintainer, 50=Owner)"
+    # )
+    # scopes = columns.String(
+    #     default="read_api",
+    #     help="Comma-separated list of permission scopes"
+    # )
+    # expires_at = columns.String(
+    #     help="Expiration date in ISO format (optional)"
+    # )
+
+    # Placeholder field - replace with your actual schema
+    placeholder = columns.String(
+        validators=[validators.Required()], help="Replace this with your actual service parameters"
+    )
+
+
+def build_clearskies_akeyless_custom_gitlab_producer(
+    url: str = "",
+) -> clearskies_akeyless_custom_producer.endpoints.NoInput:
+    """
+    Build the Gitlab producer with create/rotate/revoke endpoints.
+
+    Args:
+        url (str): Optional URL prefix for the endpoints
+
+    Returns:
+        clearskies_akeyless_custom_producer.endpoints.NoInput: The configured producer
+    """
+    return clearskies_akeyless_custom_producer.endpoints.NoInput(
+        create_callable=create,
+        rotate_callable=rotate,
+        revoke_callable=revoke,
+        payload_schema=PayloadSchema,
+        url=url,
+    )
