@@ -1,94 +1,59 @@
+import logging
 from typing import Any
 
 import clearskies
 import requests
 
+from clearskies_akeyless_custom_gitlab.common import verify_api_host
+from clearskies_akeyless_custom_gitlab.errors import GitlabError
+
+logger = logging.getLogger(__name__)
+
 
 def rotate(
-    # TODO: Add your service-specific parameters here with proper type hints
-    # Example parameters (customize based on your service):
-    # current_token: str,
-    # project_id: int,
-    # new_access_level: int | None = None,
-    # new_scopes: list[str] | None = None,
-    # current_username: str,
-    # current_password: str,
-    # force_rotation: bool = False,
+    id: int,
+    personal_access_token: str,
+    payload: dict[str, Any],
     requests: requests.Session,
+    api_url: str = "https://gitlab.com/api/v4",
 ) -> dict[str, Any]:
     """
-    Rotate credentials for the Gitlab service.
-
-    This function is called by Akeyless when credentials need to be rotated.
-    Customize the parameter list above to match your service's rotation requirements.
+    Rotate a GitLab personal access token for the specified token ID.
 
     Args:
-        # TODO: Document your specific parameters here
-        # Example parameter documentation:
-        # current_token (str): The current API token to be rotated
-        # project_id (int): The project ID for the credentials
-        # new_access_level (int | None): New access level, or None to keep current
-        # new_scopes (list[str] | None): New permission scopes, or None to keep current
-        # current_username (str): Current username for authentication
-        # current_password (str): Current password for authentication
-        # force_rotation (bool): Whether to force rotation even if not expired
-
-        requests (requests.Session): HTTP session for making API calls (automatically injected)
+        id (int): The ID of the personal access token to rotate.
+        personal_access_token (str): Personal access token with permissions to rotate tokens.
+        payload (dict[str, Any]): Additional data to include in the returned dictionary.
+        requests (requests.Session): HTTP session for making API calls.
+        api_url (str, optional): Base URL for the GitLab API. Default is "https://gitlab.com/api/v4".
 
     Returns:
-        dict[str, Any]: Dictionary containing the new credentials.
-            Structure should match what your create() function returns:
-            - 'token': New authentication token
-            - 'access_token': New OAuth access token
-            - 'api_key': New API key
-            - 'username': New username
-            - 'password': New password
-            - 'expires_at': New expiration time
+        dict[str, Any]: Dictionary containing:
+            - All key-value pairs from the input payload.
+            - 'id': The ID of the rotated personal access token.
+            - 'personal_access_token': The new personal access token string.
 
     Raises:
-        clearskies.exceptions.ClientError: If rotation fails
-
-    Examples:
-        Token rotation with existing token:
-        ```python
-        def rotate(
-            current_token: str,
-            requests: requests.Session
-        ) -> dict[str, Any]:
-        ```
-
-        OAuth2 refresh token rotation:
-        ```python
-        def rotate(
-            refresh_token: str,
-            client_id: str,
-            client_secret: str,
-            requests: requests.Session
-        ) -> dict[str, Any]:
-        ```
-
-        Project-based credential rotation:
-        ```python
-        def rotate(
-            current_access_token: str,
-            project_id: int,
-            token_id: str,
-            new_scopes: list[str] | None = None,
-            requests: requests.Session
-        ) -> dict[str, Any]:
-        ```
-
-        Database password rotation:
-        ```python
-        def rotate(
-            admin_username: str,
-            admin_password: str,
-            target_username: str,
-            database_name: str,
-            requests: requests.Session
-        ) -> dict[str, Any]:
-        ```
+        GitlabError: If the GitLab API returns an error or the rotation fails.
     """
-    # TODO: Implement your Gitlab credential rotation logic here
-    # Use the parameters passed to this function to rotate the existing credentials
-    raise NotImplementedError("You need to implement the credential rotation logic for your Gitlab service")
+    verify_api_host(api_url, personal_access_token, requests)
+    response = requests.post(
+        f"{api_url}/personal_access_tokens/self/rotate",
+        headers={"PRIVATE-TOKEN": personal_access_token},
+    )
+    if not response.ok:
+        # Fallback to rotating a specific token if self-rotate fails
+        logger.warning("Self-rotate failed, attempting to rotate specific token ID")
+        response = requests.post(
+            f"{api_url}/personal_access_tokens/{id}/rotate",
+            headers={"PRIVATE-TOKEN": personal_access_token},
+        )
+        if not response.ok:
+            raise GitlabError(response.text, api_url)
+
+    response_data = response.json()
+    return {
+        **payload,
+        "id": response_data["id"],
+        "personal_access_token": response_data["token"],
+    }

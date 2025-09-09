@@ -3,88 +3,41 @@ from typing import Any
 import clearskies
 import requests
 
+from clearskies_akeyless_custom_gitlab.common import verify_api_host
+from clearskies_akeyless_custom_gitlab.errors import GitlabError
+
 
 def revoke(
-    # TODO: Add your service-specific parameters here with proper type hints
-    # Example parameters (customize based on your service):
-    # token: str,
-    # project_id: int,
-    # token_id: str | None = None,
-    # username: str,
-    # password: str,
-    # api_key: str,
-    # force_revoke: bool = False,
+    id_to_delete: str | int,
+    group_id: str | int,
+    personal_access_token: str,
     requests: requests.Session,
-) -> dict[str, Any]:
+    api_url: str = "https://gitlab.com/api/v4",
+) -> None:
     """
-    Revoke credentials for the Gitlab service.
-
-    This function is called by Akeyless when credentials need to be revoked.
-    Customize the parameter list above to match your service's revocation requirements.
+    Revoke a GitLab group access token for the specified group and token ID.
 
     Args:
-        # TODO: Document your specific parameters here
-        # Example parameter documentation:
-        # token (str): The API token to be revoked
-        # project_id (int): The project ID for the credentials
-        # token_id (str | None): Specific token ID, or None to revoke all for user
-        # username (str): Username for authentication
-        # password (str): Password for authentication
-        # api_key (str): API key to be revoked
-        # force_revoke (bool): Whether to force revocation even if errors occur
-
-        requests (requests.Session): HTTP session for making API calls (automatically injected)
+        id_to_delete (str | int): The ID of the group access token to revoke. May include group ID as a suffix.
+        group_id (str | int): The GitLab group ID associated with the token.
+        personal_access_token (str): Personal access token with permissions to revoke group access tokens.
+        requests (requests.Session): HTTP session for making API calls.
+        api_url (str, optional): Base URL for the GitLab API. Default is "https://gitlab.com/api/v4".
 
     Returns:
-        dict[str, Any]: Dictionary containing revocation status information:
-            - 'success': Boolean indicating if revocation was successful
-            - 'revoked_tokens': List of revoked token IDs
-            - 'message': Human-readable message about the operation
-            - 'errors': List of any errors that occurred (optional)
+        None
 
     Raises:
-        clearskies.exceptions.ClientError: If revocation fails
-
-    Examples:
-        Simple token revocation:
-        ```python
-        def revoke(
-            token: str,
-            requests: requests.Session
-        ) -> dict[str, Any]:
-        ```
-
-        OAuth2 token revocation:
-        ```python
-        def revoke(
-            access_token: str,
-            client_id: str,
-            client_secret: str,
-            requests: requests.Session
-        ) -> dict[str, Any]:
-        ```
-
-        Project-based credential revocation:
-        ```python
-        def revoke(
-            admin_token: str,
-            project_id: int,
-            target_username: str,
-            requests: requests.Session
-        ) -> dict[str, Any]:
-        ```
-
-        Database user revocation:
-        ```python
-        def revoke(
-            admin_username: str,
-            admin_password: str,
-            target_username: str,
-            database_name: str,
-            requests: requests.Session
-        ) -> dict[str, Any]:
-        ```
+        GitlabError: If the GitLab API returns an error or the revocation fails.
     """
-    # TODO: Implement your Gitlab credential revocation logic here
-    # Use the parameters passed to this function to revoke the specified credentials
-    raise NotImplementedError("You need to implement the credential revocation logic for your Gitlab service")
+    verify_api_host(api_url, personal_access_token, requests)
+
+    if "_group_id_" in str(id_to_delete):
+        [id_to_delete, group_id] = str(id_to_delete).split("_group_id_")
+
+    response = requests.delete(
+        f"{api_url}/groups/{group_id}/access_tokens/{id_to_delete}",
+        headers={"PRIVATE-TOKEN": personal_access_token},
+    )
+    if not response.ok:
+        raise GitlabError(response.text, api_url)
