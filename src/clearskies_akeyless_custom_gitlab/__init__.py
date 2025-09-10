@@ -46,9 +46,9 @@ class PayloadSchema(clearskies.Schema):
         default="https://gitlab.com/api/v4",
     )
 
-    allowed_scopes = columns.Json()
+    allowed_scopes = columns.Json(default=[])
 
-    allowed_group_ids = columns.Json()
+    allowed_group_ids = columns.Json(default=[])
 
 
 class InputSchema(clearskies.Schema):

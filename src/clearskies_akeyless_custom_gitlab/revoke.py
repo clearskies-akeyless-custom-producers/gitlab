@@ -9,7 +9,6 @@ from clearskies_akeyless_custom_gitlab.errors import GitlabError
 
 def revoke(
     id_to_delete: str | int,
-    group_id: str | int,
     personal_access_token: str,
     requests: requests.Session,
     api_url: str = "https://gitlab.com/api/v4",
@@ -19,7 +18,6 @@ def revoke(
 
     Args:
         id_to_delete (str | int): The ID of the group access token to revoke. May include group ID as a suffix.
-        group_id (str | int): The GitLab group ID associated with the token.
         personal_access_token (str): Personal access token with permissions to revoke group access tokens.
         requests (requests.Session): HTTP session for making API calls.
         api_url (str, optional): Base URL for the GitLab API. Default is "https://gitlab.com/api/v4".
@@ -32,8 +30,14 @@ def revoke(
     """
     verify_api_host(api_url, personal_access_token, requests)
 
-    if "_group_id_" in str(id_to_delete):
-        [id_to_delete, group_id] = str(id_to_delete).split("_group_id_")
+    """
+    Since we can let people request a GAT for a different group, we need to extract the group id and the actual id
+    in the id we retrieve from Akeyless.
+    """
+    if "_group_id_" not in str(id_to_delete):
+        raise GitlabError(f"Invalid id format for revocation: {id_to_delete}", api_url)
+
+    [id_to_delete, group_id] = str(id_to_delete).split("_group_id_")
 
     response = requests.delete(
         f"{api_url}/groups/{group_id}/access_tokens/{id_to_delete}",

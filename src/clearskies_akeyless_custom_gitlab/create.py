@@ -24,7 +24,7 @@ def create(
     utcnow: datetime.datetime,
     for_rotate: bool = False,
     allowed_scopes: list[str] = [],
-    requested_scopes: list[str] = [],
+    requested_scopes: list[str] | None = None,
     allowed_group_ids: list[int] = [],
     requested_group_id: int | None = None,
     api_url: str = "https://gitlab.com/api/v4",
@@ -59,6 +59,8 @@ def create(
         GitlabError: If the GitLab API returns an error or message.
         GitlabProcessError: If the response does not contain a token.
     """
+    verify_api_host(api_url, personal_access_token, requests)
+
     if not isinstance(allowed_scopes, list):
         raise GitlabTypeError("allowed_scopes", "list[string]")
     if not isinstance(requested_scopes, list):
@@ -96,9 +98,11 @@ def create(
     if "token" not in response_data:
         raise GitlabProcessError(response_data, api_url)
 
-    # we change the id becuse the revokation needs to know not just the id of the GAT,
-    # but also what group it belongs to.  Since we can let people request a GAT for a
-    # different group, we need to record the group id in the id we return to Akeyless.
+    """
+    We  need to change the id because the revocation needs to know not just the id of the GAT,
+    but also what group it belongs to.  Since we can let people request a GAT for a
+    different group, we need to record the group id in the id we return to Akeyless.
+    """
     return {
         "id": f"{response_data['id']}_group_id_{group_id}",
         "group_access_token": response_data["token"],
