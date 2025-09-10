@@ -132,4 +132,8 @@ jobs:
   publish-docs:
     name: Publish Doc Site to S3
     needs: bump-version
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit
     uses: ./.github/workflows/docs.yaml
